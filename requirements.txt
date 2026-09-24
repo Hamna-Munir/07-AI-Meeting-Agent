@@ -1,0 +1,24 @@
+# LLM SDK (OpenAI-compatible — works with Groq)
+openai>=1.40.0
+
+# Structured Output Validation
+pydantic>=2.7.0
+
+# Google Calendar API
+google-api-python-client>=2.130.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# Web / UI Framework
+streamlit>=1.36.0
+
+# Data handling (evaluation.csv)
+pandas>=2.2.0
+
+# Environment & Utilities
+python-dotenv>=1.0.1
+requests>=2.32.0
+rich>=13.7.0
+
+# Testing
+pytest>=8.2.0
