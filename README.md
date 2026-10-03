@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Google%20Calendar-OAuth%202.0-6366f1?style=flat-square&logo=googlecalendar&logoColor=white" alt="Google Calendar"/>
   <img src="https://img.shields.io/badge/Human--Approved-Booking-10b981?style=flat-square" alt="Human Approved"/>
   <img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License"/>
-  <img src="https://img.shields.io/badge/Status-In%20Progress-f59e0b?style=flat-square" alt="Status"/>
+  <img src="https://img.shields.io/badge/Status-Complete-22c55e?style=flat-square" alt="Status"/>
   <img src="https://img.shields.io/badge/Last%20Commit-Week%207-6366f1?style=flat-square" alt="Last Commit"/>
 </p>
 
@@ -29,6 +29,7 @@
 - [How to Run](#️-how-to-run)
 - [Architecture](#️-architecture)
 - [Why a Real Calendar, Not Mock Data](#-why-a-real-calendar-not-mock-data)
+- [Why This Runs Locally, Not Deployed](#-why-this-runs-locally-not-deployed)
 - [Folder Structure](#-folder-structure)
 - [Future Improvements](#-future-improvements)
 - [Roadmap Context](#-roadmap-context)
@@ -39,7 +40,7 @@
 
 ## 📖 Overview
 
-**AI Meeting Agent** takes a natural-language scheduling request ("Can we have a 30-minute meeting tomorrow afternoon?"), extracts the structured details (date, duration, participants, time preference), checks **real availability on Google Calendar** via OAuth 2.0, proposes genuinely open slots, and — only after explicit human approval — creates the actual calendar event. This week moves past mock data entirely: the agent interacts with a real external system, not a simulation.
+**AI Meeting Agent** (UI codename **Meridian**) takes a natural-language scheduling request ("Can we have a 30-minute meeting tomorrow afternoon?"), extracts the structured details (date, duration, participants, time preference), checks **real availability on Google Calendar** via OAuth 2.0, proposes genuinely open slots, and — only after explicit human approval — creates the actual calendar event. This week moves past mock data entirely: the agent interacts with a real external system, not a simulation.
 
 This is **Repo 7 of 10+** in a structured 90-day AI Engineering roadmap, moving from LLM fundamentals → agentic systems → deployable AI products.
 
@@ -48,23 +49,26 @@ This is **Repo 7 of 10+** in a structured 90-day AI Engineering roadmap, moving 
 ## ✨ Features
 
 - 🧠 **Meeting Request Understanding** — extracts intent, participants, duration, date, and time preference from natural language
-- 🧾 **Structured Extraction (Pydantic)** — messy phrases like "tomorrow afternoon" are normalized into a validated `MeetingRequest` schema (date, timezone, preferred start/end window)
+- 🧾 **Structured Extraction (Pydantic)** — messy phrases like "tomorrow afternoon" or "next Wednesday" are normalized into a validated `MeetingRequest` schema (date, timezone, preferred start/end window)
+- 💬 **Follow-up Memory** — if details are missing, the agent asks a follow-up question and merges the answer into the original request instead of starting over
 - 📅 **Real Google Calendar Integration** — OAuth 2.0 authenticated access to actual calendar events, not mock data
-- 🔍 **Smart Slot Finding** — checks real free/busy data and proposes only genuinely available windows
+- 🔍 **Smart Slot Finding** — checks real free/busy data, respects explicit clock times ("after 2 PM"), skips past times, and proposes only genuinely available windows
 - ✅ **Human-Approved Booking** — `create_calendar_event()` never executes automatically; the agent proposes options, the user picks one, only then is the real event created
-- 🚫 **Conflict-Safe** — never books over an existing event, and never creates the option the user explicitly rejected
+- 🚫 **Conflict-Safe** — never books over an existing event, never creates the option the user explicitly rejected, and refuses prompt-injection attempts aimed at skipping approval
 - 🔐 **Credentials Never Committed** — `credentials.json` and `token.json` are gitignored from the start
-- 🧪 **Evaluated against 10 real-world scheduling scenarios** — including conflicts, missing information, ambiguous dates, and rejected suggestions
+- 🎨 **Polished Streamlit UI** — custom "Meridian" theme (ink/brass palette, Fraunces + Inter + JetBrains Mono), no default sidebar
+- 🧪 **Evaluated against 10+ real-world scheduling scenarios** — including conflicts, missing information, ambiguous dates, rejected suggestions, and duplicate-booking attempts
 
 ---
 
 ## 🎥 Demo
 
-*(Add a screenshot or short GIF/video here once available)*
+| | |
+|---|---|
+| ![Chat start](assets/screenshots/01-chat-start.png) | ![Slot options offered](assets/screenshots/02-slot-options.png) |
+| ![Confirmation step](assets/screenshots/03-confirmation.png) | ![Event created](assets/screenshots/04-event-created.png) |
 
-```
-assets/screenshots/
-```
+![Real event in Google Calendar](assets/screenshots/05-google-calendar.png)
 
 ---
 
@@ -84,7 +88,7 @@ pip install -r requirements.txt
 
 # 4. Configure environment variables
 cp .env.example .env
-# then add your Groq/LLM API key
+# then add your Groq/LLM API key (OPENAI_API_KEY, starts with gsk_)
 ```
 
 ---
@@ -107,9 +111,23 @@ Real calendar access requires a one-time OAuth setup:
 
 ```bash
 streamlit run src/app.py
+# or, if that's not found on your PATH:
+python -m streamlit run src/app.py
 ```
 
 The first run will prompt Google's OAuth consent screen in your browser. After authorizing, the app can read your calendar and (with your explicit confirmation) create events.
+
+To verify the Calendar connection on its own, before touching the UI:
+
+```bash
+python -m src.calendar_service
+```
+
+To run the test suite (everything mocked — no real API calls needed):
+
+```bash
+pytest
+```
 
 ---
 
@@ -145,6 +163,18 @@ Mock calendar data (used only for early testing this week) can't reveal real int
 
 ---
 
+## 🌐 Why This Runs Locally, Not Deployed
+
+This project is designed to run on your own machine rather than on a public Streamlit Cloud link, on purpose:
+
+- `credentials.json` and `token.json` are real secrets tied to one Google account and are gitignored — they should never sit in a public repo or a public deployment.
+- The OAuth flow used here (`InstalledAppFlow.run_local_server`) opens a browser on *your* machine during setup. It has no equivalent on a headless cloud server, so it can't work as-is on Streamlit Cloud.
+- Even with a different (web-based) OAuth flow, a publicly deployed single-user calendar agent would let anyone with the link create events on the owner's real calendar — not something to ship without an added login/authorization layer.
+
+For a portfolio, the screenshots/demo above plus the GitHub source are the right way to show this project — many real OAuth-integrated tools work the same way. See `docs/week-07-summary.md` for more on this decision.
+
+---
+
 ## 📂 Folder Structure
 
 ```
@@ -169,6 +199,7 @@ Mock calendar data (used only for early testing this week) can't reveal real int
 │   └── config.py
 │
 ├── tests/
+│   ├── __init__.py
 │   ├── test_parser.py
 │   ├── test_scheduler.py
 │   ├── test_tools.py
@@ -190,6 +221,7 @@ Mock calendar data (used only for early testing this week) can't reveal real int
 │   └── day-49.md
 │
 ├── assets/
+│   ├── banner.svg
 │   └── screenshots/
 │
 └── journal.md
@@ -203,6 +235,7 @@ Mock calendar data (used only for early testing this week) can't reveal real int
 - [ ] Add meeting cancellation/rescheduling flows, with the same confirmation gating as creation
 - [ ] Support recurring meeting requests
 - [ ] Add Outlook Calendar as a second provider option
+- [ ] Multi-user web OAuth flow, if this is ever deployed publicly
 
 ---
 
